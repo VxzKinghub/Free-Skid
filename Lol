@@ -1,0 +1,135 @@
+--lol,Sae Teleport 
+local Players = game:GetService("Players")
+
+local Player = Players.LocalPlayer
+
+local TARGET_1 = Vector3.new(5572, 71, -434)
+
+local STEP_DISTANCE = 750
+local STEP_DELAY = 0.1
+local CHECK_DELAY = 0.3
+
+local JUMP_COUNT = 2
+local JUMP_DELAY = 0.15
+
+local FINAL_DELAY = 1
+local FINAL_REPEAT = 20
+local FINAL_STEP_DELAY = 0.1
+
+local FINAL_POSITION_A = Vector3.new(-3410, 17287, 15705)
+local FINAL_POSITION_B = Vector3.new(-3418, 17287, 15705)
+
+local Running = false
+
+local function GetRoot()
+    local Character = Player.Character
+    if not Character then
+        return nil
+    end
+
+    return Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function GetHumanoid()
+    local Character = Player.Character
+    if not Character then
+        return nil
+    end
+
+    return Character:FindFirstChildOfClass("Humanoid")
+end
+
+local function StepTeleport(Target)
+    while true do
+        local Root = GetRoot()
+
+        if not Root then
+            return false
+        end
+
+        local Current = Root.Position
+        local Offset = Target - Current
+        local Distance = Offset.Magnitude
+
+        if Distance <= STEP_DISTANCE then
+            Root.CFrame = CFrame.new(Target) * Root.CFrame.Rotation
+            return true
+        end
+
+        local NextPosition = Current + Offset.Unit * STEP_DISTANCE
+        Root.CFrame = CFrame.new(NextPosition) * Root.CFrame.Rotation
+
+        task.wait(STEP_DELAY)
+    end
+end
+
+local function RunScript()
+    if Running then
+        return
+    end
+
+    Running = true
+
+    local Success, ErrorMessage = pcall(function()
+        if not GetRoot() then
+            return
+        end
+
+        if not StepTeleport(TARGET_1) then
+            return
+        end
+
+        task.wait(CHECK_DELAY)
+
+        local Root = GetRoot()
+        if not Root then
+            return
+        end
+
+        if (Root.Position - TARGET_1).Magnitude > 1 then
+            Root.CFrame = CFrame.new(TARGET_1) * Root.CFrame.Rotation
+            task.wait(CHECK_DELAY)
+
+            Root = GetRoot()
+            if not Root then
+                return
+            end
+        end
+
+        local Humanoid = GetHumanoid()
+        if not Humanoid then
+            return
+        end
+
+        for _ = 1, JUMP_COUNT do
+            Humanoid.Jump = true
+            Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            task.wait(JUMP_DELAY)
+        end
+
+        task.wait(FINAL_DELAY)
+
+        for i = 1, FINAL_REPEAT do
+            Root = GetRoot()
+            if not Root then
+                break
+            end
+
+            local Target = (i % 2 == 1)
+                and FINAL_POSITION_A
+                or FINAL_POSITION_B
+
+            Root.CFrame = CFrame.new(Target) * Root.CFrame.Rotation
+
+            task.wait(FINAL_STEP_DELAY)
+        end
+    end)
+
+    Running = false
+
+    if not Success then
+        warn("Teleport Script Error: " .. tostring(ErrorMessage))
+    end
+end
+
+task.spawn(RunScript)
